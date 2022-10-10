@@ -8,7 +8,7 @@ public class GraphicsModel
 
     public List<List<Vector3>> PolygonalIndexes { get; set; } = new();
 
-    public int Scale { get; set; } = 1;
+    public float Scale { get; set; } = 1;
 
     public int MaxCoordinate { get; private set; } = 1;
 

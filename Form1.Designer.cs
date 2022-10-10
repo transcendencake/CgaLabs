@@ -74,6 +74,7 @@ partial class Form1
         this.MainMenuStrip = this.menuStrip1;
         this.Name = "Form1";
         this.Text = "Lab12345";
+        this.MouseWheel += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseWheel);
         this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseDown);
         this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseMove);
         this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseUp);

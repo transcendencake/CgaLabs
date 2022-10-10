@@ -13,15 +13,18 @@ public partial class Form1 : Form
     private GraphicsModel graphicsModel;
     private readonly Camera.Camera camera;
     private readonly Timer timer;
+    private float scaleModifier = 300;
+    private float xRotation = 0;
+    private float yRotation = 0;
 
     public Form1()
     {
         InitializeComponent();
         camera = new Camera.Camera
         {
-            Eye = new Vector3(0, 0, 500),
+            Eye = new Vector3(0, 0, 300),
             Target = new Vector3(0, 0, 0),
-            Up = new Vector3(0, 1, 0),
+            Up = new Vector3(0, 1, 10),
             FieldOfViewRadians = (float) Math.PI / 3
         };
 
@@ -37,8 +40,8 @@ public partial class Form1 : Form
     {
         timer.Stop();
 
-        graphicsModel.Scale = 500 / (graphicsModel.MaxCoordinate * 4);
-        var points = VertexTransformatingUtils.Transform(camera, graphicsModel, Width, Height);
+        graphicsModel.Scale = scaleModifier / (graphicsModel.MaxCoordinate * 5);
+        var points = VertexTransformatingUtils.Transform(camera, graphicsModel, Width, Height, xRotation, yRotation);
         var drawer = new BitmapDrawer();
         this.BackgroundImage = drawer.GetBitmap(points, graphicsModel, Width, Height);
 
@@ -48,6 +51,13 @@ public partial class Form1 : Form
     private void Form1_Resize(object sender, EventArgs e)
     {
         //update bitmap drawing here
+    }
+
+    private void Form1_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
+    {
+        var delta = e.Delta > 0 ? 1.5f : 0.66f;
+
+        scaleModifier *= delta;
     }
 
     private void Form1_MouseDown(object sender, MouseEventArgs e)
@@ -68,8 +78,8 @@ public partial class Form1 : Form
         var yOffset = mousePosition.Y - e.Y;
         SaveMousePosition(e);
 
-        camera.RotateX(PixelOffsetToRotationRadians(yOffset));
-        camera.RotateY(PixelOffsetToRotationRadians(xOffset));
+        xRotation += PixelOffsetToRotationRadians(yOffset);
+        yRotation += PixelOffsetToRotationRadians(xOffset);
     }
 
     private void SaveMousePosition(MouseEventArgs e)
@@ -100,6 +110,6 @@ public partial class Form1 : Form
 
     private float PixelOffsetToRotationRadians(float pixelOffset)
     {
-        return 0.01f * pixelOffset;
+        return 0.005f * pixelOffset;
     }
 }

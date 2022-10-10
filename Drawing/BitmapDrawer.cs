@@ -64,7 +64,7 @@ public class BitmapDrawer
 
         while (point1.X != point2.X || point1.Y != point2.Y)
         {
-            bitmap.SetPixel(point1.X, point1.Y, activeColor);
+            DrawPoint(point1, bitmap);
 
             var error2 = error * 2;
 
@@ -79,11 +79,17 @@ public class BitmapDrawer
             point1.Y += signY;
         }
 
-        bitmap.SetPixel(point2.X, point2.Y, activeColor);
+        DrawPoint(point2, bitmap);
     }
 
     private Point GetPoint(Vector3 vector)
     {
         return new Point((int)vector.X, (int)vector.Y);
+    }
+
+    private void DrawPoint(Point point, Bitmap bitmap)
+    {
+        if (point.X > 0 && point.X < bitmap.Width && point.Y > 0 && point.Y < bitmap.Height)
+            bitmap.SetPixel(point.X, point.Y, activeColor);
     }
 }
