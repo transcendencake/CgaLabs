@@ -1,4 +1,6 @@
-﻿using System.Drawing.Imaging;
+﻿using System.Buffers;
+using System.Collections.Concurrent;
+using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -13,22 +15,37 @@ public class BitmapDrawer : IDisposable
     private GCHandle bitsHandle;
     private int[] bitsMatrix;
     private Bitmap bitmap;
+    private GraphicsModel model;
+    private ArrayPool<CustomPoint> arrayPool;
 
     public Bitmap GetBitmap(List<Vector3> points, GraphicsModel model, int width, int height)
     {
         this.vertexes = points;
         this.width = width;
+        this.model = model;
         this.height = height;
         bitsMatrix = Enumerable.Repeat(Color.White.ToArgb(), width * height).ToArray();
         bitsHandle = GCHandle.Alloc(bitsMatrix, GCHandleType.Pinned);
         bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, bitsHandle.AddrOfPinnedObject());
 
-        model.PolygonalIndexes.ForEach(DrawLines);
+        arrayPool = ArrayPool<CustomPoint>.Create(1000000, 100);
+        Parallel.ForEach(Partitioner.Create(0, model.PolygonalIndexes.Count), range =>
+        {
+            for (var i = range.Item1; i < range.Item2; i++)
+            {
+                var polygon = model.PolygonalIndexes[i];
+                DrawPolygon(polygon);
+            }
+        });
+        // foreach (var polygon in model.PolygonalIndexes)
+        // {
+        //     DrawPolygon(polygon);
+        // }
 
         return bitmap;
     }
 
-    private void DrawLines(List<Vector3> vertexIndexes)
+    private void DrawPolygon(List<Vector3> vertexIndexes)
     {
         for (var i = 0; i < vertexIndexes.Count - 1; i++)
         {
@@ -46,19 +63,25 @@ public class BitmapDrawer : IDisposable
         var vertexFrom = vertexes[indexFrom];
         var vertexTo = vertexes[indexTo];
 
-        var pointFrom = GetPoint(vertexFrom);
-        var pointTo = GetPoint(vertexTo);
-
-        DrawLinePoints(pointFrom, pointTo);
+        // var points = GetLinePoints(vertexFrom, vertexTo);
+        // foreach (var point in points)
+        // {
+        //     DrawPoint(point);
+        // }
+        //
+        // arrayPool.Return(points);
     }
 
-    private void DrawLinePoints(Point point1, Point point2)
+    private CustomPoint[] GetLinePoints(Vector3 point1, Vector3 point2)
     {
         var incX = 1;
         var incY = 1;
 
         var deltaX = Math.Abs(point2.X - point1.X);
         var deltaY = Math.Abs(point2.Y - point1.Y);
+
+        // var result = arrayPool.Rent(1000000);
+        var i = 0;
 
         if (point1.X > point2.X)
         {
@@ -74,7 +97,14 @@ public class BitmapDrawer : IDisposable
 
         while (point1.X != point2.X || point1.Y != point2.Y)
         {
-            DrawPoint(point1, bitmap);
+            // result[i] = new CustomPoint
+            // {
+            //     View = new Vector3(point1.X, point1.Y, point1.Z)
+            // };
+            DrawPoint(new CustomPoint
+            {
+                View = new Vector3(point1.X, point1.Y, point1.Z)
+            });
 
             var errorMultipliedBy2 = error * 2;
 
@@ -89,20 +119,28 @@ public class BitmapDrawer : IDisposable
                 error += deltaX;
                 point1.Y += incY;
             }
+
+            i++;
         }
 
-        DrawPoint(point2, bitmap);
+        // result[i] = new CustomPoint
+        // {
+        //     View = new Vector3(point1.X, point1.Y, point1.Z)
+        // };
+        return new CustomPoint[1];
     }
 
-    private Point GetPoint(Vector3 vector)
+    private void DrawPoint(CustomPoint point, int color)
     {
-        return new Point((int)vector.X, (int)vector.Y);
+        var roundedX = (int) point.View.X;
+        var roundedY = (int) point.View.Y;
+        if (roundedX > 0 && roundedX < width && roundedY > 0 && roundedY < height)
+            bitsMatrix[roundedX + (roundedY * width)] = color;
     }
 
-    private void DrawPoint(Point point, Bitmap bitmap)
+    private void DrawPoint(CustomPoint point)
     {
-        if (point.X > 0 && point.X < bitmap.Width && point.Y > 0 && point.Y < bitmap.Height)
-            bitsMatrix[point.X + (point.Y * width)] = currentColor;
+        DrawPoint(point, currentColor);
     }
 
     public void Dispose()
