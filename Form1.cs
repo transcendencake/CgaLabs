@@ -10,12 +10,13 @@ public partial class Form1 : Form
 {
     private Point mousePosition = new(0, 0);
     private bool isMouseDown;
-    private GraphicsModel graphicsModel;
+    private GraphicsModel? graphicsModel;
     private readonly Camera.Camera camera;
     private readonly Timer timer;
     private float scaleModifier = 300;
     private float xRotation = 0;
     private float yRotation = 0;
+    private BitmapDrawer? drawer;
 
     public Form1()
     {
@@ -30,7 +31,7 @@ public partial class Form1 : Form
 
         timer = new Timer
         {
-            Interval = 33,
+            Interval = 6,
             Enabled = false,
         };
         timer.Tick += Redraw;
@@ -42,7 +43,12 @@ public partial class Form1 : Form
 
         graphicsModel.Scale = scaleModifier / (graphicsModel.MaxCoordinate * 5);
         var points = VertexTransformatingUtils.Transform(camera, graphicsModel, Width, Height, xRotation, yRotation);
-        var drawer = new BitmapDrawer();
+
+        if (drawer != null)
+        {
+            drawer.Dispose();
+        }
+        drawer = new BitmapDrawer();
         this.BackgroundImage = drawer.GetBitmap(points, graphicsModel, Width, Height);
 
         timer.Start();
@@ -50,7 +56,6 @@ public partial class Form1 : Form
 
     private void Form1_Resize(object sender, EventArgs e)
     {
-        //update bitmap drawing here
     }
 
     private void Form1_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)

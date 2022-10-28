@@ -7,7 +7,7 @@ public static class VertexTransformatingUtils
 {
     public static List<Vector3> Transform(Camera.Camera camera, GraphicsModel model, int width, int height, float xRotation, float yRotation)
     {
-        var viewPortMatrix = GetViewPortSpace(width, height);
+        var viewPortMatrix = GetViewportSpace(width, height);
         var worldMatrix = GetWorldSpace(model.Scale, xRotation, yRotation);
         var viewMatrix = GetViewSpace(camera);
         var projectionMatrix = GetPerspectiveSpace(camera.FieldOfViewRadians, width, height);
@@ -31,7 +31,7 @@ public static class VertexTransformatingUtils
         return result;
     }
 
-    private static Matrix4x4 GetViewPortSpace(float width, float height, float xMin = 0, float yMin = 0)
+    private static Matrix4x4 GetViewportSpace(float width, float height, float xMin = 0, float yMin = 0)
     {
         return new Matrix4x4(
             width / 2, 0, 0, 0,
