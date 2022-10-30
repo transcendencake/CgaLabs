@@ -25,37 +25,77 @@ public class BitmapDrawer : IDisposable
         bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, bitsHandle.AddrOfPinnedObject());
         this.model = model;
 
-        model.PolygonalIndexes.ForEach(DrawLines);
+        model.PolygonalIndexes.ForEach(DrawPolygon);
 
         return bitmap;
     }
 
-    private void DrawLines(List<Vector3> vertexIndexes)
+    private void DrawPolygon(List<Vector3> vertexIndexes)
     {
+        var edgePoints = new List<CustomPoint>();
         for (var i = 0; i < vertexIndexes.Count - 1; i++)
         {
-            DrawLine(i, i + 1, vertexIndexes);
+            edgePoints.AddRange(GetLinePoints(i, i + 1, vertexIndexes));
         }
 
-        DrawLine(0, vertexIndexes.Count - 1, vertexIndexes);
+        edgePoints.AddRange(GetLinePoints(0, vertexIndexes.Count - 1, vertexIndexes));
+
+        RasterizeAndDrawPolygonByEdgePoints(edgePoints);
     }
 
-    private void DrawLine(int from, int to, List<Vector3> indexes)
+    private void RasterizeAndDrawPolygonByEdgePoints(List<CustomPoint> edgePoints)
     {
-        var indexFrom = (int)indexes[from].X - 1;
-        var indexTo = (int)indexes[to].X - 1;
+        if (edgePoints.Count == 0)
+        {
+            return;
+        }
 
-        var vertexFrom = vertexes[indexFrom];
-        var vertexTo = vertexes[indexTo];
+        var orderedByYs = edgePoints
+            .Select(p => p.View.Y)
+            .OrderBy(p => p)
+            .ToList();
+        var minBoundaryY = orderedByYs.First();
+        var maxBoundaryY = orderedByYs.Last();
 
-        var pointFrom = GetCustomPoint(vertexFrom);
-        var pointTo = GetCustomPoint(vertexTo);
+        for (int y = minBoundaryY + 1; y < maxBoundaryY; y++)
+        {
+            var linePoints = edgePoints
+                .Where(p => p.View.Y == y)
+                .OrderBy(p => p.View.X)
+                .ToList();
+            var pointFrom = linePoints.First();
+            var pointTo = linePoints.Last();
+
+            var points = GetLinePoints(pointFrom, pointTo);
+
+            foreach (var point in points)
+            {
+                DrawPoint(point);
+            }
+        }
+    }
+
+    private List<CustomPoint> GetLinePoints(int from, int to, List<Vector3> indexes, bool draw = true)
+    {
+        var vertexIndexFrom = (int)indexes[from].X - 1;
+        var vertexIndexTo = (int)indexes[to].X - 1;
+        var normalIndexFrom = (int)indexes[from].Z - 1;
+        var normalIndexTo = (int)indexes[to].Z - 1;
+
+        var pointFrom = GetCustomPoint(vertexes[vertexIndexFrom], model.Normals[normalIndexFrom], model.Vertexes[vertexIndexFrom]);
+        var pointTo = GetCustomPoint(vertexes[vertexIndexTo], model.Normals[normalIndexTo], model.Vertexes[vertexIndexTo]);
 
         var points = GetLinePoints(pointFrom, pointTo);
-        foreach (var point in points)
+
+        if (draw)
         {
-            DrawPoint(point);
+            foreach (var point in points)
+            {
+                DrawPoint(point);
+            }
         }
+
+        return points;
     }
 
     private List<CustomPoint> GetLinePoints(CustomPoint point1, CustomPoint point2)
@@ -142,6 +182,8 @@ public class BitmapDrawer : IDisposable
         return new CustomPoint
         {
             View = vector.ToVector3Int(),
+            Normal = normal,
+            World = world
         };
     }
 
