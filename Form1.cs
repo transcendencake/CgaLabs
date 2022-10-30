@@ -50,7 +50,7 @@ public partial class Form1 : Form
             drawer.Dispose();
         }
         drawer = new BitmapDrawer();
-        this.BackgroundImage = drawer.GetBitmap(graphicsModel, Width, Height, lightPosition, camera.Eye);
+        this.BackgroundImage = drawer.GetBitmap(graphicsModel, Width, Height, lightPosition);
 
         timer.Start();
     }

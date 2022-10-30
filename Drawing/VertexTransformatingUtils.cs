@@ -14,7 +14,7 @@ public static class VertexTransformatingUtils
         var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
         model.TransformedVertexes = GetWindowSpace(transformMatrix, model.Vertexes, viewPortMatrix);
         model.TransformedNormals = GetTransformedNormals(model.Normals, xRotation, yRotation);
-        model.TransformedWorld = GetTransformedNormals(model.Vertexes, xRotation, yRotation);
+        model.TransformedCamera = GetTransformedCamera(transformMatrix, camera.Eye, viewPortMatrix);
     }
 
     private static Matrix4x4 GetWorldSpace(float scale, float xRotation, float yRotation)
@@ -79,5 +79,18 @@ public static class VertexTransformatingUtils
         });
 
         return windowPoints.ToList();
+    }
+
+    private static Vector3 GetTransformedCamera(Matrix4x4 transformMatrix, Vector3 eye, Matrix4x4 viewPortMatrix)
+    {
+        var point = new Vector4(eye.X, eye.Y, eye.Z, 1);
+        var transformedPoint = Vector4.Transform(point, transformMatrix);
+        transformedPoint /= transformedPoint.W;
+        var displayPoint = Vector4.Transform(point, viewPortMatrix);
+        return new Vector3(
+            displayPoint.X,
+            displayPoint.Y,
+            displayPoint.Z
+        );
     }
 }

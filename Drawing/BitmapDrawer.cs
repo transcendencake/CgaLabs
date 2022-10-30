@@ -19,7 +19,7 @@ public class BitmapDrawer : IDisposable
     private Vector3 lightPosition;
     private Vector3 cameraPosition;
 
-    public Bitmap GetBitmap(GraphicsModel model, int width, int height, Vector3 light, Vector3 cameraPosition)
+    public Bitmap GetBitmap(GraphicsModel model, int width, int height, Vector3 light)
     {
         this.width = width;
         this.height = height;
@@ -29,7 +29,7 @@ public class BitmapDrawer : IDisposable
         bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppArgb, bitsHandle.AddrOfPinnedObject());
         this.model = model;
         this.lightPosition = light;
-        this.cameraPosition = cameraPosition;
+        this.cameraPosition = model.TransformedCamera;
 
         DrawSun(Color.Brown.ToArgb());
         model.PolygonalIndexes.ForEach(DrawPolygon);
@@ -112,8 +112,8 @@ public class BitmapDrawer : IDisposable
         var normalIndexFrom = (int)indexes[from].Z - 1;
         var normalIndexTo = (int)indexes[to].Z - 1;
 
-        var pointFrom = GetCustomPoint(model.TransformedVertexes[vertexIndexFrom], model.TransformedNormals[normalIndexFrom], model.TransformedWorld[vertexIndexFrom]);
-        var pointTo = GetCustomPoint(model.TransformedVertexes[vertexIndexTo], model.TransformedNormals[normalIndexTo], model.TransformedWorld[vertexIndexTo]);
+        var pointFrom = GetCustomPoint(model.TransformedVertexes[vertexIndexFrom], model.TransformedNormals[normalIndexFrom]);
+        var pointTo = GetCustomPoint(model.TransformedVertexes[vertexIndexTo], model.TransformedNormals[normalIndexTo]);
 
         var points = GetLinePoints(pointFrom, pointTo);
 
@@ -136,7 +136,6 @@ public class BitmapDrawer : IDisposable
         var point2Y = point2.View.Y;
         var point1Z = point1.View.Z;
         var normal = point1.Normal;
-        var world = point1.World;
 
         var deltaX = Math.Abs(point2X - point1X);
         var deltaY = Math.Abs(point2Y - point1Y);
@@ -146,7 +145,6 @@ public class BitmapDrawer : IDisposable
             return Enumerable.Empty<CustomPoint>().ToList();
         }
 
-        var deltaWorld = (point2.World - point1.World) / iterationsAmount;
         var deltaNormal = (point2.Normal - point1.Normal) / iterationsAmount;
         var deltaZ = (point2.View.Z - point1.View.Z) / iterationsAmount;
 
@@ -168,7 +166,6 @@ public class BitmapDrawer : IDisposable
                     Z = point1Z
                 },
                 Normal = normal + Vector3.Zero,
-                World = world + Vector3.Zero
             };
             result.Add(newPoint);
 
@@ -188,7 +185,6 @@ public class BitmapDrawer : IDisposable
 
             point1Z += deltaZ;
             normal += deltaNormal;
-            world += deltaWorld;
         }
 
         var newPoint2 = new CustomPoint
@@ -200,20 +196,18 @@ public class BitmapDrawer : IDisposable
                 Z = point1Z
             },
             Normal = normal + Vector3.Zero,
-            World = world + Vector3.Zero
         };
         result.Add(newPoint2);
 
         return result;
     }
 
-    private CustomPoint GetCustomPoint(Vector3 vector, Vector3 normal, Vector3 world)
+    private CustomPoint GetCustomPoint(Vector3 vector, Vector3 normal)
     {
         return new CustomPoint
         {
             View = vector.ToVector3Int(),
-            Normal = normal,
-            World = world
+            Normal = normal
         };
     }
 
@@ -261,7 +255,7 @@ public class BitmapDrawer : IDisposable
         var vertex = point.View.ToVector3();
         var normal = Vector3.Normalize(point.Normal);
         var light = Vector3.Normalize(vertex - lightPosition);
-        var view = Vector3.Normalize(cameraPosition - point.World);
+        var view = Vector3.Normalize(cameraPosition - vertex);
         var reflect = Vector3.Normalize(Vector3.Reflect(-light, normal));
 
         var reflectionColor = 0.3f

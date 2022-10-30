@@ -12,7 +12,7 @@ public class GraphicsModel
 
     public List<Vector3> TransformedNormals { get; set; } = new();
 
-    public List<Vector3> TransformedWorld { get; set; } = new();
+    public Vector3 TransformedCamera { get; set; } = new();
 
     public List<List<Vector3>> PolygonalIndexes { get; set; } = new();
 
