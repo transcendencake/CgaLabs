@@ -17,16 +17,16 @@ public partial class Form1 : Form
     private float xRotation = 0;
     private float yRotation = 0;
     private BitmapDrawer? drawer;
-    private Vector3 lightPosition = new Vector3(600, 100, 0);
+    private Vector3 lightPosition = new Vector3(600, 100, 200);
 
     public Form1()
     {
         InitializeComponent();
         camera = new Camera.Camera
         {
-            Eye = new Vector3(0, 0, 300),
+            Eye = new Vector3(0, 0, -300),
             Target = new Vector3(0, 0, 0),
-            Up = new Vector3(0, 1, 10),
+            Up = new Vector3(0, 1, 0),
             FieldOfViewRadians = (float) Math.PI / 3
         };
 
@@ -43,14 +43,14 @@ public partial class Form1 : Form
         timer.Stop();
 
         graphicsModel.Scale = scaleModifier / (graphicsModel.MaxCoordinate * 5);
-        var points = VertexTransformatingUtils.Transform(camera, graphicsModel, Width, Height, xRotation, yRotation);
+        VertexTransformatingUtils.Transform(camera, graphicsModel, Width, Height, xRotation, yRotation);
 
         if (drawer != null)
         {
             drawer.Dispose();
         }
         drawer = new BitmapDrawer();
-        this.BackgroundImage = drawer.GetBitmap(points, graphicsModel, Width, Height, lightPosition);
+        this.BackgroundImage = drawer.GetBitmap(graphicsModel, Width, Height, lightPosition);
 
         timer.Start();
     }

@@ -5,19 +5,36 @@ namespace CgaLabs.Drawing;
 
 public static class VertexTransformatingUtils
 {
-    public static List<Vector3> Transform(Camera.Camera camera, GraphicsModel model, int width, int height, float xRotation, float yRotation)
+    public static void Transform(Camera.Camera camera, GraphicsModel model, int width, int height, float xRotation, float yRotation)
     {
         var viewPortMatrix = GetViewportSpace(width, height);
         var worldMatrix = GetWorldSpace(model.Scale, xRotation, yRotation);
         var viewMatrix = GetViewSpace(camera);
         var projectionMatrix = GetPerspectiveSpace(camera.FieldOfViewRadians, width, height);
         var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
-        return GetWindowSpace(transformMatrix, model.Vertexes, viewPortMatrix);
+        model.TransformedVertexes = GetWindowSpace(transformMatrix, model.Vertexes, viewPortMatrix);
+        model.TransformedNormals = GetTransformedNormals(model.Normals, xRotation, yRotation);
     }
 
     private static Matrix4x4 GetWorldSpace(float scale, float xRotation, float yRotation)
     {
         return Matrix4x4.CreateScale(scale) * Matrix4x4.CreateRotationX(xRotation) * Matrix4x4.CreateRotationY(yRotation);
+    }
+
+    private static List<Vector3> GetTransformedNormals(List<Vector4> normals, float xRotation, float yRotation)
+    {
+        var result = new List<Vector3>(normals.Count);
+        var transformationMatrix = Matrix4x4.CreateRotationX(xRotation) * Matrix4x4.CreateRotationY(yRotation);
+        foreach (var normal in normals)
+        {
+            var point = Vector4.Transform(normal, transformationMatrix);
+            result.Add(new Vector3(
+                point.X,
+                point.Y,
+                point.Z
+            ));
+        }
+        return result;
     }
 
     private static Matrix4x4 GetPerspectiveSpace(float fov, float width, float height)

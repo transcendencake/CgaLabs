@@ -6,7 +6,11 @@ public class GraphicsModel
 {
     public List<Vector4> Vertexes { get; set; } = new();
 
-    public List<Vector3> Normals { get; set; } = new();
+    public List<Vector3> TransformedVertexes { get; set; } = new();
+
+    public List<Vector4> Normals { get; set; } = new();
+
+    public List<Vector3> TransformedNormals { get; set; } = new();
 
     public List<List<Vector3>> PolygonalIndexes { get; set; } = new();
 

@@ -52,12 +52,13 @@ public static class ObjParser
             parts.Length > 4 ? ParseFloat(parts[4]) : 1);
     }
 
-    private static Vector3 ParseNormal(string[] parts)
+    private static Vector4 ParseNormal(string[] parts)
     {
-        return new Vector3(
+        return new Vector4(
             ParseFloat(parts[1]),
             ParseFloat(parts[2]),
-            ParseFloat(parts[3]));
+            ParseFloat(parts[3]),
+            1);
     }
 
     private static List<Vector3> ParsePolygon(string[] parts)

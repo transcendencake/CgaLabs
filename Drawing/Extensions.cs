@@ -4,13 +4,13 @@ namespace CgaLabs.Drawing;
 
 public static class Extensions
 {
-    public static Vector3Int ToVector3Int(this Vector3 value)
+    public static Vector3ForDrawing ToVector3Int(this Vector3 value)
     {
-        return new Vector3Int
+        return new Vector3ForDrawing
         {
             X = (int)value.X,
             Y = (int)value.Y,
-            Z = (int)value.Z
+            Z = value.Z
         };
     }
 }

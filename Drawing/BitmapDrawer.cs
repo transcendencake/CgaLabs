@@ -1,29 +1,33 @@
-﻿using System.Drawing.Imaging;
+﻿using System.Diagnostics;
+using System.Drawing.Imaging;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Xamarin.Essentials;
 
 namespace CgaLabs.Drawing;
 
 public class BitmapDrawer : IDisposable
 {
-    private List<Vector3> vertexes;
     private int width;
     private int height;
-    private readonly int currentColor = Color.Black.ToArgb();
+    private readonly Color currentColor = Color.Orange;
     private GCHandle bitsHandle;
     private int[] bitsMatrix;
+    private float[] zBuffer;
     private Bitmap bitmap;
     private GraphicsModel model;
     private Vector3 lightPosition;
+    private List<float> debugZs = new List<float>(2000000);
+    private List<float> debugZs2 = new List<float>(2000000);
 
-    public Bitmap GetBitmap(List<Vector3> points, GraphicsModel model, int width, int height, Vector3 light)
+    public Bitmap GetBitmap(GraphicsModel model, int width, int height, Vector3 light)
     {
-        this.vertexes = points;
         this.width = width;
         this.height = height;
         bitsMatrix = Enumerable.Repeat(Color.White.ToArgb(), width * height).ToArray();
+        zBuffer = Enumerable.Repeat(float.MaxValue, width * height).ToArray();
         bitsHandle = GCHandle.Alloc(bitsMatrix, GCHandleType.Pinned);
-        bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, bitsHandle.AddrOfPinnedObject());
+        bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppArgb, bitsHandle.AddrOfPinnedObject());
         this.model = model;
         this.lightPosition = light;
 
@@ -35,6 +39,11 @@ public class BitmapDrawer : IDisposable
 
     private void DrawPolygon(List<Vector3> vertexIndexes)
     {
+        var vertexColors = vertexIndexes
+            .Select(p => CalculateVertexShadowedColor(model.TransformedVertexes[(int)p.X - 1], model.TransformedNormals[(int)p.Z - 1], currentColor))
+            .ToList();
+        var polygonColor = currentColor.WithLuminosity(CalculateAverageColor(vertexColors) * 100);
+
         var edgePoints = new List<CustomPoint>();
         for (var i = 0; i < vertexIndexes.Count - 1; i++)
         {
@@ -43,10 +52,24 @@ public class BitmapDrawer : IDisposable
 
         edgePoints.AddRange(GetLinePoints(0, vertexIndexes.Count - 1, vertexIndexes));
 
-        RasterizeAndDrawPolygonByEdgePoints(edgePoints);
+        RasterizeAndDrawPolygonByEdgePoints(edgePoints, polygonColor.ToArgb());
+
+
     }
 
-    private void RasterizeAndDrawPolygonByEdgePoints(List<CustomPoint> edgePoints)
+    private float CalculateVertexShadowedColor(Vector3 vertex, Vector3 normal, Color color)
+    {
+        var cos = Vector3.Dot(Vector3.Normalize(normal), Vector3.Normalize(vertex - lightPosition));
+        var k = cos > 0 ? cos : 0;
+        return color.GetBrightness() * k;
+    }
+
+    private float CalculateAverageColor(List<float> colors)
+    {
+        return colors.Sum() / colors.Count;
+    }
+
+    private void RasterizeAndDrawPolygonByEdgePoints(List<CustomPoint> edgePoints, int color)
     {
         if (edgePoints.Count == 0)
         {
@@ -73,20 +96,25 @@ public class BitmapDrawer : IDisposable
 
             foreach (var point in points)
             {
-                DrawPoint(point);
+                DrawPoint(point, color);
+            }
+
+            foreach (var point in edgePoints)
+            {
+                DrawPoint(point, color);
             }
         }
     }
 
-    private List<CustomPoint> GetLinePoints(int from, int to, List<Vector3> indexes, bool draw = true)
+    private List<CustomPoint> GetLinePoints(int from, int to, List<Vector3> indexes, bool draw = false)
     {
         var vertexIndexFrom = (int)indexes[from].X - 1;
         var vertexIndexTo = (int)indexes[to].X - 1;
         var normalIndexFrom = (int)indexes[from].Z - 1;
         var normalIndexTo = (int)indexes[to].Z - 1;
 
-        var pointFrom = GetCustomPoint(vertexes[vertexIndexFrom], model.Normals[normalIndexFrom], model.Vertexes[vertexIndexFrom]);
-        var pointTo = GetCustomPoint(vertexes[vertexIndexTo], model.Normals[normalIndexTo], model.Vertexes[vertexIndexTo]);
+        var pointFrom = GetCustomPoint(model.TransformedVertexes[vertexIndexFrom], model.TransformedNormals[normalIndexFrom], model.Vertexes[vertexIndexFrom]);
+        var pointTo = GetCustomPoint(model.TransformedVertexes[vertexIndexTo], model.TransformedNormals[normalIndexTo], model.Vertexes[vertexIndexTo]);
 
         var points = GetLinePoints(pointFrom, pointTo);
 
@@ -134,11 +162,11 @@ public class BitmapDrawer : IDisposable
         {
             var newPoint = new CustomPoint
             {
-                View = new Vector3Int
+                View = new Vector3ForDrawing
                 {
                     X = point1X,
                     Y = point1Y,
-                    Z = point1.View.Z
+                    Z = point1Z
                 },
                 Normal = normal + Vector3.Zero,
                 World = world + Vector4.Zero
@@ -166,11 +194,11 @@ public class BitmapDrawer : IDisposable
 
         var newPoint2 = new CustomPoint
         {
-            View = new Vector3Int
+            View = new Vector3ForDrawing
             {
                 X = point1X,
                 Y = point1Y,
-                Z = point1.View.Z
+                Z = point1Z
             },
             Normal = normal + Vector3.Zero,
             World = world + Vector4.Zero
@@ -199,7 +227,7 @@ public class BitmapDrawer : IDisposable
             {
                 if (x * x + y * y <= radius * radius)
                 {
-                    DrawPoint((int)lightPosition.X + x, (int)lightPosition.Y + y, color);
+                    DrawPoint((int)lightPosition.X + x, (int)lightPosition.Y + y, (int)lightPosition.Z, color);
                 }
             }
         }
@@ -207,19 +235,31 @@ public class BitmapDrawer : IDisposable
 
     private void DrawPoint(CustomPoint point)
     {
-        DrawPoint(point, currentColor);
+        DrawPoint(point, currentColor.ToArgb());
     }
 
     private void DrawPoint(CustomPoint point, int color)
     {
-        DrawPoint(point.View.X, point.View.Y, color);
+        DrawPoint(point.View.X, point.View.Y, point.View.Z, color);
     }
 
-    private void DrawPoint(int x, int y, int color)
+    private void DrawPoint(int x, int y, float z, int color)
     {
-        if (x > 0 && x < bitmap.Width && y > 0 && y < bitmap.Height)
+        debugZs.Add(z);
+        if (
+            x > 0
+            && x < bitmap.Width
+            && y > 0
+            && y < bitmap.Height
+            && z < zBuffer[x + (y * width)])
+        {
+            zBuffer[x + (y * width)] = z;
             bitsMatrix[x + (y * width)] = color;
+            debugZs2.Add(z);
+        }
     }
+
+
 
     public void Dispose()
     {

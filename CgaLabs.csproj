@@ -8,4 +8,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Xamarin.Essentials" Version="1.7.3" />
+    </ItemGroup>
+
 </Project>
