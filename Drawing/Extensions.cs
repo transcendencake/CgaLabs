@@ -13,4 +13,19 @@ public static class Extensions
             Z = value.Z
         };
     }
+
+    public static Vector3 ToVector3(this Vector3ForDrawing value)
+    {
+        return new Vector3
+        {
+            X = value.X,
+            Y = value.Y,
+            Z = value.Z
+        };
+    }
+
+    public static Vector3 ToVector3(this Color color)
+    {
+        return new Vector3(color.R, color.G, color.B);
+    }
 }

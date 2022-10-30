@@ -14,6 +14,7 @@ public static class VertexTransformatingUtils
         var transformMatrix = worldMatrix * viewMatrix * projectionMatrix;
         model.TransformedVertexes = GetWindowSpace(transformMatrix, model.Vertexes, viewPortMatrix);
         model.TransformedNormals = GetTransformedNormals(model.Normals, xRotation, yRotation);
+        model.TransformedWorld = GetTransformedNormals(model.Vertexes, xRotation, yRotation);
     }
 
     private static Matrix4x4 GetWorldSpace(float scale, float xRotation, float yRotation)

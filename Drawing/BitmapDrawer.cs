@@ -10,17 +10,16 @@ public class BitmapDrawer : IDisposable
 {
     private int width;
     private int height;
-    private readonly Color currentColor = Color.Orange;
+    private readonly Color currentColor = Color.DarkRed;
     private GCHandle bitsHandle;
     private int[] bitsMatrix;
     private float[] zBuffer;
     private Bitmap bitmap;
     private GraphicsModel model;
     private Vector3 lightPosition;
-    private List<float> debugZs = new List<float>(2000000);
-    private List<float> debugZs2 = new List<float>(2000000);
+    private Vector3 cameraPosition;
 
-    public Bitmap GetBitmap(GraphicsModel model, int width, int height, Vector3 light)
+    public Bitmap GetBitmap(GraphicsModel model, int width, int height, Vector3 light, Vector3 cameraPosition)
     {
         this.width = width;
         this.height = height;
@@ -30,6 +29,7 @@ public class BitmapDrawer : IDisposable
         bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppArgb, bitsHandle.AddrOfPinnedObject());
         this.model = model;
         this.lightPosition = light;
+        this.cameraPosition = cameraPosition;
 
         DrawSun(Color.Brown.ToArgb());
         model.PolygonalIndexes.ForEach(DrawPolygon);
@@ -39,10 +39,10 @@ public class BitmapDrawer : IDisposable
 
     private void DrawPolygon(List<Vector3> vertexIndexes)
     {
-        var vertexColors = vertexIndexes
-            .Select(p => CalculateVertexShadowedColor(model.TransformedVertexes[(int)p.X - 1], model.TransformedNormals[(int)p.Z - 1], currentColor))
-            .ToList();
-        var polygonColor = currentColor.WithLuminosity(CalculateAverageColor(vertexColors) * 100);
+        // var vertexColors = vertexIndexes
+        //     .Select(p => CalculateVertexShadowedColor(model.TransformedVertexes[(int)p.X - 1], model.TransformedNormals[(int)p.Z - 1], currentColor))
+        //     .ToList();
+        // var polygonColor = currentColor.WithLuminosity(CalculateAverageColor(vertexColors) * 100);
 
         var edgePoints = new List<CustomPoint>();
         for (var i = 0; i < vertexIndexes.Count - 1; i++)
@@ -52,9 +52,8 @@ public class BitmapDrawer : IDisposable
 
         edgePoints.AddRange(GetLinePoints(0, vertexIndexes.Count - 1, vertexIndexes));
 
-        RasterizeAndDrawPolygonByEdgePoints(edgePoints, polygonColor.ToArgb());
-
-
+        // RasterizeAndDrawPolygonByEdgePoints(edgePoints, polygonColor.ToArgb());
+        RasterizeAndDrawPolygonByEdgePoints(edgePoints, 0);
     }
 
     private float CalculateVertexShadowedColor(Vector3 vertex, Vector3 normal, Color color)
@@ -113,8 +112,8 @@ public class BitmapDrawer : IDisposable
         var normalIndexFrom = (int)indexes[from].Z - 1;
         var normalIndexTo = (int)indexes[to].Z - 1;
 
-        var pointFrom = GetCustomPoint(model.TransformedVertexes[vertexIndexFrom], model.TransformedNormals[normalIndexFrom], model.Vertexes[vertexIndexFrom]);
-        var pointTo = GetCustomPoint(model.TransformedVertexes[vertexIndexTo], model.TransformedNormals[normalIndexTo], model.Vertexes[vertexIndexTo]);
+        var pointFrom = GetCustomPoint(model.TransformedVertexes[vertexIndexFrom], model.TransformedNormals[normalIndexFrom], model.TransformedWorld[vertexIndexFrom]);
+        var pointTo = GetCustomPoint(model.TransformedVertexes[vertexIndexTo], model.TransformedNormals[normalIndexTo], model.TransformedWorld[vertexIndexTo]);
 
         var points = GetLinePoints(pointFrom, pointTo);
 
@@ -169,7 +168,7 @@ public class BitmapDrawer : IDisposable
                     Z = point1Z
                 },
                 Normal = normal + Vector3.Zero,
-                World = world + Vector4.Zero
+                World = world + Vector3.Zero
             };
             result.Add(newPoint);
 
@@ -201,14 +200,14 @@ public class BitmapDrawer : IDisposable
                 Z = point1Z
             },
             Normal = normal + Vector3.Zero,
-            World = world + Vector4.Zero
+            World = world + Vector3.Zero
         };
         result.Add(newPoint2);
 
         return result;
     }
 
-    private CustomPoint GetCustomPoint(Vector3 vector, Vector3 normal, Vector4 world)
+    private CustomPoint GetCustomPoint(Vector3 vector, Vector3 normal, Vector3 world)
     {
         return new CustomPoint
         {
@@ -240,12 +239,11 @@ public class BitmapDrawer : IDisposable
 
     private void DrawPoint(CustomPoint point, int color)
     {
-        DrawPoint(point.View.X, point.View.Y, point.View.Z, color);
+        DrawPoint(point.View.X, point.View.Y, point.View.Z, GetPointColor(point).ToArgb());
     }
 
     private void DrawPoint(int x, int y, float z, int color)
     {
-        debugZs.Add(z);
         if (
             x > 0
             && x < bitmap.Width
@@ -255,11 +253,33 @@ public class BitmapDrawer : IDisposable
         {
             zBuffer[x + (y * width)] = z;
             bitsMatrix[x + (y * width)] = color;
-            debugZs2.Add(z);
         }
     }
 
+    private Color GetPointColor(CustomPoint point)
+    {
+        var vertex = point.View.ToVector3();
+        var normal = Vector3.Normalize(point.Normal);
+        var light = Vector3.Normalize(vertex - lightPosition);
+        var view = Vector3.Normalize(cameraPosition - point.World);
+        var reflect = Vector3.Normalize(Vector3.Reflect(-light, normal));
 
+        var reflectionColor = 0.3f
+            * (float) Math.Pow(Math.Max(0, Vector3.Dot(reflect, view)), 20)
+            * Color.White.ToVector3();
+        var diffuseColor = 0.7f * Math.Max(Vector3.Dot(normal, light), 0) * currentColor.ToVector3();
+        var backgroundColor = 0.3f * currentColor.ToVector3();
+
+        var colorVector = reflectionColor + diffuseColor + backgroundColor;
+        var color = Color.FromArgb(
+            255,
+            Math.Min((int)colorVector.X, 255),
+            Math.Min((int)colorVector.Y, 255),
+            Math.Min((int)colorVector.Z, 255)
+        );
+
+        return color;
+    }
 
     public void Dispose()
     {

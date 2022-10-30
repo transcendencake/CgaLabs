@@ -12,6 +12,8 @@ public class GraphicsModel
 
     public List<Vector3> TransformedNormals { get; set; } = new();
 
+    public List<Vector3> TransformedWorld { get; set; } = new();
+
     public List<List<Vector3>> PolygonalIndexes { get; set; } = new();
 
     public float Scale { get; set; } = 1;
