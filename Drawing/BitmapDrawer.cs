@@ -14,8 +14,9 @@ public class BitmapDrawer : IDisposable
     private int[] bitsMatrix;
     private Bitmap bitmap;
     private GraphicsModel model;
+    private Vector3 lightPosition;
 
-    public Bitmap GetBitmap(List<Vector3> points, GraphicsModel model, int width, int height)
+    public Bitmap GetBitmap(List<Vector3> points, GraphicsModel model, int width, int height, Vector3 light)
     {
         this.vertexes = points;
         this.width = width;
@@ -24,7 +25,9 @@ public class BitmapDrawer : IDisposable
         bitsHandle = GCHandle.Alloc(bitsMatrix, GCHandleType.Pinned);
         bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, bitsHandle.AddrOfPinnedObject());
         this.model = model;
+        this.lightPosition = light;
 
+        DrawSun(Color.Brown.ToArgb());
         model.PolygonalIndexes.ForEach(DrawPolygon);
 
         return bitmap;
@@ -187,6 +190,21 @@ public class BitmapDrawer : IDisposable
         };
     }
 
+    private void DrawSun(int color)
+    {
+        var radius = 5;
+        for (int y = -radius; y <= radius; y++)
+        {
+            for (int x = -radius; x <= radius; x++)
+            {
+                if (x * x + y * y <= radius * radius)
+                {
+                    DrawPoint((int)lightPosition.X + x, (int)lightPosition.Y + y, color);
+                }
+            }
+        }
+    }
+
     private void DrawPoint(CustomPoint point)
     {
         DrawPoint(point, currentColor);
@@ -194,8 +212,13 @@ public class BitmapDrawer : IDisposable
 
     private void DrawPoint(CustomPoint point, int color)
     {
-        if (point.View.X > 0 && point.View.X < bitmap.Width && point.View.Y > 0 && point.View.Y < bitmap.Height)
-            bitsMatrix[point.View.X + (point.View.Y * width)] = color;
+        DrawPoint(point.View.X, point.View.Y, color);
+    }
+
+    private void DrawPoint(int x, int y, int color)
+    {
+        if (x > 0 && x < bitmap.Width && y > 0 && y < bitmap.Height)
+            bitsMatrix[x + (y * width)] = color;
     }
 
     public void Dispose()

@@ -17,6 +17,7 @@ public partial class Form1 : Form
     private float xRotation = 0;
     private float yRotation = 0;
     private BitmapDrawer? drawer;
+    private Vector3 lightPosition = new Vector3(600, 100, 0);
 
     public Form1()
     {
@@ -49,7 +50,7 @@ public partial class Form1 : Form
             drawer.Dispose();
         }
         drawer = new BitmapDrawer();
-        this.BackgroundImage = drawer.GetBitmap(points, graphicsModel, Width, Height);
+        this.BackgroundImage = drawer.GetBitmap(points, graphicsModel, Width, Height, lightPosition);
 
         timer.Start();
     }
@@ -111,6 +112,25 @@ public partial class Form1 : Form
 
         graphicsModel = ObjParser.GetModel(filePath);
         timer.Enabled = true;
+    }
+
+    private void Form1_KeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.KeyCode)
+        {
+            case Keys.Up:
+                this.lightPosition.Y -= 30;
+                break;
+            case Keys.Down:
+                this.lightPosition.Y += 30;
+                break;
+            case Keys.Left:
+                this.lightPosition.X -= 30;
+                break;
+            case Keys.Right:
+                this.lightPosition.X += 30;
+                break;
+        }
     }
 
     private float PixelOffsetToRotationRadians(float pixelOffset)
