@@ -29,9 +29,10 @@ public static class ObjParser
                     result.Vertexes.Add(ParseVertex(parts));
                     break;
                 case "vt":
-                    throw new NotImplementedException();
+                    break;
                 case "vn":
-                    throw new NotImplementedException();
+                    result.Normals.Add(ParseNormal(parts));
+                    break;
                 case "f":
                     result.PolygonalIndexes.Add(ParsePolygon(parts));
                     break;
@@ -49,6 +50,14 @@ public static class ObjParser
             ParseFloat(parts[2]),
             ParseFloat(parts[3]),
             parts.Length > 4 ? ParseFloat(parts[4]) : 1);
+    }
+
+    private static Vector3 ParseNormal(string[] parts)
+    {
+        return new Vector3(
+            ParseFloat(parts[1]),
+            ParseFloat(parts[2]),
+            ParseFloat(parts[3]));
     }
 
     private static List<Vector3> ParsePolygon(string[] parts)

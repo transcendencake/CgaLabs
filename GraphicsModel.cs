@@ -6,6 +6,8 @@ public class GraphicsModel
 {
     public List<Vector4> Vertexes { get; set; } = new();
 
+    public List<Vector3> Normals { get; set; } = new();
+
     public List<List<Vector3>> PolygonalIndexes { get; set; } = new();
 
     public float Scale { get; set; } = 1;
